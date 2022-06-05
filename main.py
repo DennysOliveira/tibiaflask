@@ -58,9 +58,9 @@ if(tibiaWindow):
 
 # Rule Constants
 HealingSpellExhaustTimer = getNowMs()
-HealingSpellExhaustTime = 1000
+HealingSpellExhaustTime = 1010
 PotionExhaustTimer = getNowMs()
-PotionExhaustTime = 1000
+PotionExhaustTime = 1010
 
 # Stage Constants
 HealthPotionStage1Percent = 60
@@ -74,6 +74,14 @@ ManaPotionStage1Hotkey = win32con.VK_F3
 
 HealingSpellStage1Percent = 95
 HealingSpellStage1Hotkey  = win32con.VK_F4
+
+UturaTime = 61000
+UturaTimer = getNowMs()
+UturaHotkey = win32con.VK_F5
+
+FoodTime = 50000
+FoodTimer = getNowMs()
+FoodHotkey = win32con.VK_F12
 
 with open('preferences.yml', 'w') as file:
     yaml.dump(UserConfig, file);
@@ -274,9 +282,50 @@ while 1:
                 currentHealthPercent = stats[0]
                 currentManaPercent = stats[1]
                 
+                # Support Spells & Food -> non-danger situation, not-exhausted (probably not in combat)
+                if((not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)) and (not isExhausted(PotionExhaustTimer, PotionExhaustTime))):
+                    if(currentHealthPercent > 70 and currentManaPercent > 20):
+                        if(not isExhausted(UturaTimer, UturaTime)):
+                            print("Casting Utura.")
+                            # Perform Action
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, UturaHotkey)
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, UturaHotkey)
+                            sleep((randrange(45,70) / 1000))
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, UturaHotkey)
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, UturaHotkey)
+                            
+                            UturaTimer = getNowMs()
+                            
+                        if(not isExhausted(FoodTimer, FoodTime) and isExhausted(UturaTimer, UturaTime)):
+                            print("Eating food.")
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
+                            sleep((randrange(45,70) / 1000))
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
+                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
+                            
+                            FoodTimer = getNowMs()
+                
+                # Healing Spell -> Has mana, should call before potion
+                if(not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)):
+                    if(currentHealthPercent < HealingSpellStage1Percent and currentManaPercent > 5):
+                        # Perform Action
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        sleep((randrange(45,70) / 1000))
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        
+                        # Reset Timer
+                        HealingSpellExhaustTimer = getNowMs()
+                
+                # Potions
                 if(not isExhausted(PotionExhaustTimer, PotionExhaustTime)):
                     if(currentHealthPercent < HealthPotionStage2Percent):
                         # Perform Action                    
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
+                        sleep((randrange(45,70) / 1000))
                         win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
                         win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
                         
@@ -287,6 +336,9 @@ while 1:
                         # Perform Action                                       
                         win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
                         win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
+                        sleep((randrange(45,70) / 1000))
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
                         
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
@@ -294,23 +346,14 @@ while 1:
                     elif(currentManaPercent < ManaPotionStage1Percent):
                         # Perform Action                    
                         win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, ManaPotionStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, ManaPotionStage1Hotkey)                
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, ManaPotionStage1Hotkey)
+                        sleep((randrange(45,70) / 1000))
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, ManaPotionStage1Hotkey)
+                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, ManaPotionStage1Hotkey)               
                                     
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
-                
-                if(not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)):
-                    if(currentHealthPercent < HealingSpellStage1Percent):
-                        # Perform Action                                        
-                        # keyboard.send(HealingSpellStage1Hotkey)
-                        # keyboard.send(HealingSpellStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
                         
-                        
-                        # Reset Timer
-                        HealingSpellExhaustTimer = getNowMs()
-
                 if ScriptDebugEnabled:
                     diff = getNowMs() - now                
                     print("Debug: Status reading took ms: \n" + str(diff))        
