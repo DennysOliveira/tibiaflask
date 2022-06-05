@@ -1,0 +1,21 @@
+settings:
+  game:
+    handle: 131792
+  mirror:
+    handle: 394034
+  player:
+    status:
+      cropbox:
+      - 1767
+      - 5
+      - 1858
+      - 28
+      location:
+      - 1753
+      - 5
+stages:
+  potions:
+    health:
+      one:
+        hotkey: F1
+        percentage: 50
