@@ -38,3 +38,4 @@ stages:
   support:
     food:
       time-repeat-ms: 49000
+      hotkey: F12

@@ -103,24 +103,24 @@ PotionExhaustTime = 100
 
 # Stage Constants
 HealthPotionStage1Percent = UserConfig["stages"]["potions"]["health"]["one"]["percentage"]
-HealthPotionStage1Hotkey  = "F1"
+HealthPotionStage1Hotkey  = UserConfig["stages"]["potions"]["health"]["one"]["hotkey"]
 
 HealthPotionStage2Percent = UserConfig["stages"]["potions"]["health"]["two"]["percentage"]
-HealthPotionStage2Hotkey  = "F2"
+HealthPotionStage2Hotkey  = UserConfig["stages"]["potions"]["health"]["two"]["hotkey"]
 
 ManaPotionStage1Percent = UserConfig["stages"]["potions"]["mana"]["one"]["percentage"]
-ManaPotionStage1Hotkey = "F3"
+ManaPotionStage1Hotkey = UserConfig["stages"]["potions"]["mana"]["one"]["hotkey"]
 
 HealingSpellStage1Percent = UserConfig["stages"]["spells"]["healing"]["one"]["percentage"]
-HealingSpellStage1Hotkey  = "F4"
+HealingSpellStage1Hotkey  = UserConfig["stages"]["spells"]["healing"]["one"]["hotkey"]
 
 UturaTime = 61000
 UturaTimer = getNowMs()
-UturaHotkey = "F5"
+UturaHotkey = UserConfig["stages"]["spells"]["support"]["utura"]["hotkey"]
 
 FoodTime = UserConfig["stages"]["support"]["food"]["time-repeat-ms"]
 FoodTimer = getNowMs()
-FoodHotkey = "F12"
+FoodHotkey = UserConfig["stages"]["support"]["food"]["hotkey"]
 
 with open('preferences.yml', 'w') as file:
     yaml.dump(UserConfig, file);
