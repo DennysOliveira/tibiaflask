@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Screenshot Output Folder for Linux Platform
+snapshots

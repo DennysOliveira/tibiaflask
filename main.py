@@ -1,28 +1,38 @@
+from re import T
+import subprocess
 import sys
+from sys import platform
+from notifypy import Notify
+from src.InputManager import InputManager
 import yaml
-
 import time
 def getNowMs():
     return time.time() * 1000
 
+if platform == "windows":
+    import win32gui
+    import win32ui
+    import win32api
+    import win32con
+    from ctypes import windll
 from random import randrange
 from pstats import Stats
 from pydoc import locate
 from time import sleep
-import win32gui
-import win32ui
-import win32api
-import win32con
-from ctypes import windll
 from PIL import Image
 import pyautogui
 import keyboard
 import numpy
 import cv2
 
+print("Loading user preferences from preferences.yml")
 UserConfig = yaml.safe_load(open('preferences.yml'))
-print("Loading User Config")
-print(UserConfig)
+if UserConfig:
+    print("Loaded user preferences successfully.")
+else:
+    print("Could not load user preferences.")
+    sys.exit()
+# print(UserConfig)
 
 # Constants
 ScriptDebugEnabled = False
@@ -39,92 +49,132 @@ MpBarMiddle = 17
 
 ScriptStatus = False
 
-
+def Execute(cmd):
+    output, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
+    return output.decode("utf8")
 
 MirrorWindowTitle = "Windowed Projector (Source) - Game Capture"
 MirrorWindowHandle = UserConfig["settings"]["game"]["handle"]
-mirrorWindow = pyautogui.getWindowsWithTitle(MirrorWindowTitle)
-if(mirrorWindow):
-    MirrorWindowHandle = mirrorWindow[0]._hWnd
-    UserConfig["settings"]["mirror"]["handle"] = MirrorWindowHandle
-    
+if platform == "windows":
+    mirrorWindow = pyautogui.getWindowsWithTitle(MirrorWindowTitle)
+    if(mirrorWindow):
+        MirrorWindowHandle = mirrorWindow[0]._hWnd
+elif platform == "linux":
+    MirrorWindowHandle = 999
+
+UserConfig["settings"]["mirror"]["handle"] = MirrorWindowHandle
+
     
 TibiaWindowTitle = "Tibia - "
 TibiaWindowHandle = UserConfig["settings"]["game"]["handle"]
-tibiaWindow = pyautogui.getWindowsWithTitle(TibiaWindowTitle)
-if(tibiaWindow):
-    TibiaWindowHandle = tibiaWindow[0]._hWnd    
-    UserConfig["settings"]["game"]["handle"] = TibiaWindowHandle
+if platform == "windows":
+    tibiaWindow = pyautogui.getWindowsWithTitle(TibiaWindowTitle)
+    if(tibiaWindow):
+        TibiaWindowHandle = tibiaWindow[0]._hWnd    
+        
+elif platform == "linux":
+    savedHandle = UserConfig["settings"]["game"]["handle"]
+    savedExists = Execute(["xdotool", "getwindowname", savedHandle])
+
+    if(savedExists):
+        print("Loaded Tibia Client handle from previous session.")
+        TibiaWindowHandle = savedHandle
+    else:
+        handle = Execute(["xdotool", "search", "--name", "Tibia -"])
+        print("Tibia Handle Found")
+        print(handle.split("\n")[0])
+
+        # Remove trailing line breaks from search result
+        TibiaWindowHandle = handle.split("\n")[0]
+
+        if not TibiaWindowHandle:
+            print("You have to be logged in a character for Tibia Client to be properly detected.")
+            print("Open TibiaFlask again.")
+            print("Exiting TibiaFlask...")
+            sys.exit()
+
+UserConfig["settings"]["game"]["handle"] = TibiaWindowHandle
+
 
 # Rule Constants
 HealingSpellExhaustTimer = getNowMs()
-HealingSpellExhaustTime = 1010
+HealingSpellExhaustTime = 100
 PotionExhaustTimer = getNowMs()
-PotionExhaustTime = 1010
+PotionExhaustTime = 100
 
 # Stage Constants
-HealthPotionStage1Percent = 60
-HealthPotionStage1Hotkey  = win32con.VK_F1
+HealthPotionStage1Percent = UserConfig["stages"]["potions"]["health"]["one"]["percentage"]
+HealthPotionStage1Hotkey  = "F1"
 
-HealthPotionStage2Percent = 20
-HealthPotionStage2Hotkey  = win32con.VK_F2
+HealthPotionStage2Percent = UserConfig["stages"]["potions"]["health"]["two"]["percentage"]
+HealthPotionStage2Hotkey  = "F2"
 
-ManaPotionStage1Percent = 85
-ManaPotionStage1Hotkey = win32con.VK_F3
+ManaPotionStage1Percent = UserConfig["stages"]["potions"]["mana"]["one"]["percentage"]
+ManaPotionStage1Hotkey = "F3"
 
-HealingSpellStage1Percent = 95
-HealingSpellStage1Hotkey  = win32con.VK_F4
+HealingSpellStage1Percent = UserConfig["stages"]["spells"]["healing"]["one"]["percentage"]
+HealingSpellStage1Hotkey  = "F4"
 
 UturaTime = 61000
 UturaTimer = getNowMs()
-UturaHotkey = win32con.VK_F5
+UturaHotkey = "F5"
 
-FoodTime = 50000
+FoodTime = UserConfig["stages"]["support"]["food"]["time-repeat-ms"]
 FoodTimer = getNowMs()
-FoodHotkey = win32con.VK_F12
+FoodHotkey = "F12"
 
 with open('preferences.yml', 'w') as file:
     yaml.dump(UserConfig, file);
 
-def GrabImage(hwnd = pyautogui.getActiveWindow()):
-  # Change the line below depending on whether you want the whole window
-  # or just the client area. 
-  left, top, right, bot = win32gui.GetClientRect(hwnd)
-  # left, top, right, bot = win32gui.GetWindowRect(hwnd)
-  w = right - left
-  h = bot - top
-
-  hwndDC = win32gui.GetWindowDC(hwnd)
-  mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
-  saveDC = mfcDC.CreateCompatibleDC()
-
-  saveBitMap = win32ui.CreateBitmap()
-  saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
-
-  saveDC.SelectObject(saveBitMap)
-
-  # Change the line below depending on whether you want the whole window
-  # or just the client area. 
-  #result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
-  result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 3)
-
-  bmpinfo = saveBitMap.GetInfo()
-  bmpstr = saveBitMap.GetBitmapBits(True)
-
-  im = Image.frombuffer(
-      'RGB',
-      (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-      bmpstr, 'raw', 'BGRX', 0, 1)
-
-  win32gui.DeleteObject(saveBitMap.GetHandle())
-  saveDC.DeleteDC()
-  mfcDC.DeleteDC()
-  win32gui.ReleaseDC(hwnd, hwndDC)
-
-#   print('Debug: Image Grab.')
-  
-  return im
     
+if(platform == 'windows'):
+    def GrabImage(hwnd = pyautogui.getActiveWindow()):
+        # Change the line below depending on whether you want the whole window
+        # or just the client area. 
+        left, top, right, bot = win32gui.GetClientRect(hwnd)
+        # left, top, right, bot = win32gui.GetWindowRect(hwnd)
+        w = right - left
+        h = bot - top
+
+        hwndDC = win32gui.GetWindowDC(hwnd)
+        mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
+        saveDC = mfcDC.CreateCompatibleDC()
+
+        saveBitMap = win32ui.CreateBitmap()
+        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+
+        saveDC.SelectObject(saveBitMap)
+
+        # Change the line below depending on whether you want the whole window
+        # or just the client area. 
+        #result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
+        result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 3)
+
+        bmpinfo = saveBitMap.GetInfo()
+        bmpstr = saveBitMap.GetBitmapBits(True)
+
+        im = Image.frombuffer(
+            'RGB',
+            (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+            bmpstr, 'raw', 'BGRX', 0, 1)
+
+        win32gui.DeleteObject(saveBitMap.GetHandle())
+        saveDC.DeleteDC()
+        mfcDC.DeleteDC()
+        win32gui.ReleaseDC(hwnd, hwndDC)
+        #   print('Debug: Image Grab.')
+        return im
+
+elif(platform == 'linux'):
+    def GrabImage():
+        # print("Grabbing Image")
+        file = 'snapshots/tmp_scrot.png'
+        Execute(["rm", "-rf", file])
+        Execute(["scrot", "-u", file])
+        im = Image.open(file)
+        return im
+
+
 def LocateImage(mainImage, compareImage, precision=0.8):
     img_rgb = numpy.array(mainImage)
     img_gray = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
@@ -160,7 +210,11 @@ def ScanStats(statsImage):
 
 def TakeMirrorImage(MirrorHwnd):
     # print("Debug: Taking Mirror Image")
-    img = GrabImage(MirrorHwnd)
+    if(platform == "windows"):
+        img = GrabImage(MirrorHwnd)
+    elif(platform == "linux"):
+        img = GrabImage()
+
     return img
     
 def CheckStatsRoutine():
@@ -169,15 +223,27 @@ def CheckStatsRoutine():
     statsImg = crop.resize((BarsWidth, BarsHeight))
     
     return ScanStats(statsImg)
-     
+
+def GetActiveHwnd():
+    if platform == "linux":
+        window = Execute["xdotool", "getactivewindow"].split("\n")[0]
+        if window:
+            return window
+        else:
+            return None
+
 def doConfig():
     print('HUD Configuration Initialized')
+
     
-    
+    if platform == "linux":
+        MirrorWindowHandle = 999
+
     if(MirrorWindowHandle != 0):        
-        gameImage = GrabImage(MirrorWindowHandle)
+        gameImage = TakeMirrorImage(MirrorWindowHandle)
         located = LocateImage(gameImage, "./health.png")
-            
+        gameImage.save('testimg.png')
+
         if(located[0] != 0 and located[1] != 0):
             StatsLocation[0] = located[0]
             StatsLocation[1] = located[1]
@@ -205,23 +271,7 @@ def doConfig():
     print("Debug: StatsLocation")
     print(str(StatsLocation) + "\n")
     return
-    
-def setTibiaClient():
-    wind = pyautogui.getActiveWindow()
-    if wind:
-        TibiaWindowHandle = wind._hWnd
-        TibiaWindowTitle = wind.title
-    else: 
-        print('Could not find a window.')
-        
-def setMirrorWindow():
-    wind = pyautogui.getActiveWindow()
-    if wind:
-        MirrorWindowHandle = wind._hWnd
-        MirrorWindowTitle = wind.title
-    else: 
-        print('Could not find a window.')
-        
+            
 def toggleBool(Status):
     if(Status):
         Status = False
@@ -234,14 +284,25 @@ def toggleBool(Status):
     return Status
   
 def isWinActive(targetHwnd):
-    currentWindow = pyautogui.getActiveWindow()
-    if(currentWindow):
-        if(currentWindow._hWnd == targetHwnd):
-            return True
+    if platform == "windows":
+        currentWindow = pyautogui.getActiveWindow()
+        if(currentWindow):
+            if(currentWindow._hWnd == targetHwnd):
+                return True
+            else:
+                return False
         else:
             return False
-    else:
-        return False
+    elif platform == "linux":
+        currentHwnd = Execute(["xdotool", "getactivewindow"]).split("\n")[0]
+        
+        if(currentHwnd):
+            if(currentHwnd == targetHwnd):
+                return True
+            else:
+                return False
+        else:
+            return False
 
 def isExhausted(exhaustTimer, exhaustTime):
     diff = getNowMs() - exhaustTimer
@@ -256,23 +317,41 @@ def ReloadUserPreferences():
             yaml.dump(UserConfig, file);
     print("Reloaded and updated user preferences.")
 
+def ExitFlask():
+    print("Saving User Preferences...")
+    with open('preferences.yml', 'w') as file:
+        yaml.dump(UserConfig, file);
+    
+    print("Exiting TibiaFlask...")
+    sys.exit()
+
+def NotifyUserMessage(msg):
+    notification = Notify()
+    notification.title = "TibiaFlask"
+    notification.message = msg
+    notification.send()
+
 while 1:
     try:
         if keyboard.is_pressed("ctrl+shift+1"):
             ScriptStatus = toggleBool(ScriptStatus)
+            # NotifyUserMessage("TibiaFlask Status: "  + str(ScriptStatus))
+            sleep(0.2)
             
         if keyboard.is_pressed("ctrl+shift+2"):
             doConfig()
-            sleep(0.250)
+            sleep(0.2)
             
-        if keyboard.is_pressed("ctrl+shift+3"):
-            ReloadUserPreferences()
-            sleep(0.250)
-            
+        if keyboard.is_pressed("shift+end"):
+            # NotifyUserMessage("Ending TibiaFlask...")
+            ExitFlask()
+
+        # if keyboard.is_pressed("ctrl+shift+3"):
+        #     ReloadUserPreferences()
+        #     sleep(0.2)
             
         if(ScriptStatus):
             if isWinActive(TibiaWindowHandle):
-                
                 if ScriptDebugEnabled:
                     now = getNowMs()
                     print("Debug: Health and Mana Stats")
@@ -288,21 +367,25 @@ while 1:
                         if(not isExhausted(UturaTimer, UturaTime)):
                             print("Casting Utura.")
                             # Perform Action
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, UturaHotkey)
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, UturaHotkey)
+                            InputManager.SendKeystroke(UturaHotkey)
                             sleep((randrange(45,70) / 1000))
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, UturaHotkey)
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, UturaHotkey)
+                            InputManager.SendKeystroke(UturaHotkey)
+                            
+
                             
                             UturaTimer = getNowMs()
                             
                         if(not isExhausted(FoodTimer, FoodTime) and isExhausted(UturaTimer, UturaTime)):
                             print("Eating food.")
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
+
+                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
+                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
+                            keyboard.send(FoodHotkey)
                             sleep((randrange(45,70) / 1000))
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
-                            win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
+                            keyboard.send(FoodHotkey)
+
+                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
+                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
                             
                             FoodTimer = getNowMs()
                 
@@ -310,11 +393,13 @@ while 1:
                 if(not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)):
                     if(currentHealthPercent < HealingSpellStage1Percent and currentManaPercent > 5):
                         # Perform Action
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        keyboard.send(HealingSpellStage1Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        keyboard.send(HealingSpellStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
                         
                         # Reset Timer
                         HealingSpellExhaustTimer = getNowMs()
@@ -323,50 +408,43 @@ while 1:
                 if(not isExhausted(PotionExhaustTimer, PotionExhaustTime)):
                     if(currentHealthPercent < HealthPotionStage2Percent):
                         # Perform Action                    
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
+                        keyboard.send(HealthPotionStage2Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
+                        keyboard.send(HealthPotionStage2Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
                         
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
                         
                     elif(currentHealthPercent < HealthPotionStage1Percent):
                         # Perform Action                                       
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
+                        keyboard.send(HealthPotionStage1Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
+                        keyboard.send(HealthPotionStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
+                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
                         
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
                     
                     elif(currentManaPercent < ManaPotionStage1Percent):
-                        # Perform Action                    
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, ManaPotionStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, ManaPotionStage1Hotkey)
+                        # Perform Action     
+                        InputManager.SendKeystroke(ManaPotionStage1Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, ManaPotionStage1Hotkey)
-                        win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, ManaPotionStage1Hotkey)               
-                                    
+                        InputManager.SendKeystroke(ManaPotionStage1Hotkey)
+
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
                         
                 if ScriptDebugEnabled:
                     diff = getNowMs() - now                
                     print("Debug: Status reading took ms: \n" + str(diff))        
-            sleep(0.1)
+            sleep(0.05)
     except KeyboardInterrupt:
-        print("Saving User Preferences...")
-        with open('preferences.yml', 'w') as file:
-            yaml.dump(UserConfig, file);
+        ExitFlask()
         
-        print("Exiting TibiaFlask...")
-        sys.exit()
-        
-# keyboard.add_hotkey("ctrl+shift+4", doConfig)
-# keyboard.add_hotkey("ctrl+shift+3", setMirrorWindow)
-# keyboard.add_hotkey("ctrl+shift+2", setTibiaClient)
-# keyboard.add_hotkey("ctrl+shift+1", toggleScript)    

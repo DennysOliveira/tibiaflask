@@ -1,21 +1,40 @@
 settings:
   game:
-    handle: 1376794
+    handle: '4194330'
   mirror:
-    handle: 394034
+    handle: 999
   player:
     status:
       cropbox:
-      - 1767
+      - 1213
       - 5
-      - 1858
+      - 1304
       - 28
       location:
-      - 1753
+      - 1199
       - 5
 stages:
   potions:
     health:
       one:
         hotkey: F1
-        percentage: 50
+        percentage: 40
+      two:
+        hotkey: F2
+        percentage: 25
+    mana:
+      one:
+        hotkey: F3
+        percentage: 85
+  spells:
+    healing:
+      one:
+        hotkey: F4
+        percentage: 95
+    support:
+      utura:
+        exhaust-timer: 61000
+        hotkey: F5
+  support:
+    food:
+      time-repeat-ms: 49000
