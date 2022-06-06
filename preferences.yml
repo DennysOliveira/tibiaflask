@@ -33,9 +33,11 @@ stages:
         percentage: 95
     support:
       utura:
+        enabled: True
         exhaust-timer: 61000
         hotkey: F5
   support:
     food:
+      enabled: True
       time-repeat-ms: 49000
       hotkey: F12

@@ -114,10 +114,12 @@ ManaPotionStage1Hotkey = UserConfig["stages"]["potions"]["mana"]["one"]["hotkey"
 HealingSpellStage1Percent = UserConfig["stages"]["spells"]["healing"]["one"]["percentage"]
 HealingSpellStage1Hotkey  = UserConfig["stages"]["spells"]["healing"]["one"]["hotkey"]
 
-UturaTime = 61000
+UturaEnabled = UserConfig["stages"]["spells"]["support"]["utura"]["enabled"]
+UturaTime = UserConfig["stages"]["spells"]["support"]["utura"]["exhaust-timer"]
 UturaTimer = getNowMs()
 UturaHotkey = UserConfig["stages"]["spells"]["support"]["utura"]["hotkey"]
 
+FoodEnabled = UserConfig["stages"]["support"]["food"]["enabled"]
 FoodTime = UserConfig["stages"]["support"]["food"]["time-repeat-ms"]
 FoodTimer = getNowMs()
 FoodHotkey = UserConfig["stages"]["support"]["food"]["hotkey"]
@@ -359,7 +361,7 @@ while 1:
                 # Support Spells & Food -> non-danger situation, not-exhausted (probably not in combat)
                 if((not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)) and (not isExhausted(PotionExhaustTimer, PotionExhaustTime))):
                     if(currentHealthPercent > 70 and currentManaPercent > 20):
-                        if(not isExhausted(UturaTimer, UturaTime)):
+                        if(not isExhausted(UturaTimer, UturaTime) and UturaEnabled):
                             print("Casting Utura.")
                             # Perform Action
                             InputManager.SendKeystroke(UturaHotkey)
@@ -369,7 +371,7 @@ while 1:
                             # Reset Timer
                             UturaTimer = getNowMs()
                             
-                        if(not isExhausted(FoodTimer, FoodTime) and isExhausted(UturaTimer, UturaTime)):
+                        if(FoodEnabled and not isExhausted(FoodTimer, FoodTime) and isExhausted(UturaTimer, UturaTime)):
                             print("Eating Food.")
                             # Perform Action
                             InputManager.SendKeystroke(FoodHotkey)
