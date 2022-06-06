@@ -1,11 +1,16 @@
+from src.InputManager import InputManager
 from re import T
 import subprocess
 import sys
 from sys import platform
 from notifypy import Notify
-from src.InputManager import InputManager
 import yaml
 import time
+from random import randrange
+from time import sleep
+from PIL import Image
+import numpy
+import cv2
 def getNowMs():
     return time.time() * 1000
 
@@ -15,15 +20,9 @@ if platform == "windows":
     import win32api
     import win32con
     from ctypes import windll
-from random import randrange
-from pstats import Stats
-from pydoc import locate
-from time import sleep
-from PIL import Image
-import pyautogui
-import keyboard
-import numpy
-import cv2
+    import pyautogui
+
+
 
 print("Loading user preferences from preferences.yml")
 UserConfig = yaml.safe_load(open('preferences.yml'))
@@ -333,22 +332,18 @@ def NotifyUserMessage(msg):
 
 while 1:
     try:
-        if keyboard.is_pressed("ctrl+shift+1"):
+        if InputManager.IsPressed("ctrl+shift+1"):
             ScriptStatus = toggleBool(ScriptStatus)
             # NotifyUserMessage("TibiaFlask Status: "  + str(ScriptStatus))
             sleep(0.2)
             
-        if keyboard.is_pressed("ctrl+shift+2"):
+        if InputManager.IsPressed("ctrl+shift+2"):
             doConfig()
             sleep(0.2)
             
-        if keyboard.is_pressed("shift+end"):
+        if InputManager.IsPressed("shift+end"):
             # NotifyUserMessage("Ending TibiaFlask...")
             ExitFlask()
-
-        # if keyboard.is_pressed("ctrl+shift+3"):
-        #     ReloadUserPreferences()
-        #     sleep(0.2)
             
         if(ScriptStatus):
             if isWinActive(TibiaWindowHandle):
@@ -371,35 +366,26 @@ while 1:
                             sleep((randrange(45,70) / 1000))
                             InputManager.SendKeystroke(UturaHotkey)
                             
-
-                            
+                            # Reset Timer
                             UturaTimer = getNowMs()
                             
                         if(not isExhausted(FoodTimer, FoodTime) and isExhausted(UturaTimer, UturaTime)):
-                            print("Eating food.")
-
-                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
-                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
-                            keyboard.send(FoodHotkey)
+                            print("Eating Food.")
+                            # Perform Action
+                            InputManager.SendKeystroke(FoodHotkey)
                             sleep((randrange(45,70) / 1000))
-                            keyboard.send(FoodHotkey)
+                            InputManager.SendKeystroke(FoodHotkey)
 
-                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, FoodHotkey)
-                            # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, FoodHotkey)
-                            
+                            # Reset Timer
                             FoodTimer = getNowMs()
                 
                 # Healing Spell -> Has mana, should call before potion
                 if(not isExhausted(HealingSpellExhaustTimer, HealingSpellExhaustTime)):
                     if(currentHealthPercent < HealingSpellStage1Percent and currentManaPercent > 5):
                         # Perform Action
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
-                        keyboard.send(HealingSpellStage1Hotkey)
+                        InputManager.SendKeystroke(HealingSpellStage1Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        keyboard.send(HealingSpellStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealingSpellStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealingSpellStage1Hotkey)
+                        InputManager.SendKeystroke(HealingSpellStage1Hotkey)
                         
                         # Reset Timer
                         HealingSpellExhaustTimer = getNowMs()
@@ -408,26 +394,18 @@ while 1:
                 if(not isExhausted(PotionExhaustTimer, PotionExhaustTime)):
                     if(currentHealthPercent < HealthPotionStage2Percent):
                         # Perform Action                    
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
-                        keyboard.send(HealthPotionStage2Hotkey)
+                        InputManager.SendKeystroke(HealthPotionStage2Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        keyboard.send(HealthPotionStage2Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage2Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage2Hotkey)
+                        InputManager.SendKeystroke(HealthPotionStage2Hotkey)
                         
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
                         
                     elif(currentHealthPercent < HealthPotionStage1Percent):
                         # Perform Action                                       
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
-                        keyboard.send(HealthPotionStage1Hotkey)
+                        InputManager.SendKeystroke(HealthPotionStage1Hotkey)
                         sleep((randrange(45,70) / 1000))
-                        keyboard.send(HealthPotionStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYDOWN, HealthPotionStage1Hotkey)
-                        # win32api.PostMessage(TibiaWindowHandle, win32con.WM_KEYUP, HealthPotionStage1Hotkey)
+                        InputManager.SendKeystroke(HealthPotionStage1Hotkey)
                         
                         # Reset Timer
                         PotionExhaustTimer = getNowMs()
